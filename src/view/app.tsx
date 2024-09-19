@@ -1,129 +1,93 @@
-import React, {useEffect, useState} from 'react';
-import {Box, Newline, Spacer, Text, useInput} from 'ink';
-import {imapClient} from "../services/mail/imap-client.js";
-import {MessageView} from "../services/mail/model.js";
-import SelectInput from 'ink-select-input';
-import Spinner from 'ink-spinner';
-import {auth} from "../services/mail/auth.js";
-
-
-// import {Query} from "./components/form/query.js";
-// import {Select} from "./components/form/select.js";
-
-// type Props = {
-// 	name: string | undefined;
-// };
+import React, {useEffect} from 'react';
+import {useInput, Spacer} from 'ink';
+import {Main} from "./layout/main.js";
+import {useMailContext, useMailDispatch} from "./context/mail-context.js";
+import {Footer} from "./layout/partials/footer.js";
+import {Header} from "./layout/partials/header.js";
+import {useViewContext, useViewDispatch, ViewState} from "./context/view-context.js";
+import {Detail} from "./page/detail.js";
+import {Overview} from "./page/overview.js";
+import {imapClient} from "../services/imap/index.js";
 
 export default function App() {
-	const [authData, setAuth] = useState({} as {user:string});
-	const [data, setData] = useState([] as MessageView[]);
-	const [message, setMessage] = useState({} as MessageView);
-	const [loading, setLoading] = useState(true);
+	const state = useMailContext();
+	const dispatch = useMailDispatch()
+	const viewDispatch = useViewDispatch();
+	const viewState = useViewContext()
 
 	useEffect(() => {
-		imapClient.connect().then(() => {
-			setLoading(false)
-			setData(imapClient.getMails());
+		(async () => {
+			await imapClient.connect();
+			const boxes = await imapClient.getMailBoxes();
+			dispatch({type: "updateBoxList", boxList: boxes});
+		})().catch(error => {
+			console.error(error)
 		})
-		setAuth(auth)
 	}, []);
 
 	useInput((input, key) => {
+		if (input === 'd') {
+			console.log("messages:", state?.mails?.length || "noMessages loaded")
+			console.log("message:", state?.message?.envelope?.subject || "noMessage Set")
+			console.log("loading:", state?.loading ? "true" : "false")
+		}
 		if (input === 'q') {
 			imapClient.disconnect();
 			return process.exit(0)
 		}
 		if (input === 's') {
-			if (message && message.uid) {
-				imapClient.flag(message.uid, "\\SEEN");
-				setLoading(true)
-				imapClient.disconnect();
-				imapClient.connect().then(() => {
-					setLoading(false)
-					setData(imapClient.getMails());
-				})
+			if (state.message && state.message.uid) {
+				console.log("flag as seen")
+				// dispatch({type: "loading"})
+				// imapClient.flag(state.message.uid, "\\SEEN").then(() => {
+				// 	dispatch({type: "clearMessage"})
+				// });
+				// reloadMessageList();
 			}
 			return;
 		}
 		if (key['delete'] === true) {
-			if (message && message.uid) {
-				imapClient.flag(message.uid, "\\DELETED");
-				setLoading(true)
-				imapClient.disconnect();
-				imapClient.connect().then(() => {
-					setMessage({} as MessageView);
-					setLoading(false)
-					setData(imapClient.getMails());
-				})
+			if (state.message && state.message.uid) {
+				console.log("delete")
+				// dispatch({type: "loading"})
+				// imapClient.flag(state.message.uid, "\\DELETED").then(() => {
+				// 	imapClient.delete([state.message.uid]).then(() => {
+				// 		dispatch({type: "clearMessage"});
+				// 	})
+				// });
+				// reloadMessageList();
 			}
 			return;
 		}
 		if (key['escape'] === true) {
-			setMessage({} as MessageView);
+			viewDispatch({type: "overview"})
 		}
 	});
 
-	const handleSelect = (item: { value: number, label: string }) => {
-		const messages = data.filter((message) => {
-			return message.uid === item.value
-		})
-		if (messages.length > 0) {
-			setMessage(messages[0] as MessageView);
+
+	const getComponentByViewState = (viewState: ViewState) => {
+		switch (viewState) {
+			case "detail": {
+				return (<Detail/>);
+			}
+			case "overview": {
+				return (<Overview/>);
+			}
+
+			default: {
+				throw new Error("unknown action")
+			}
 		}
-	};
-
-	const createLabel = (label: string, date: Date) => {
-		return `${label} - ${date.toLocaleDateString()}`;
 	}
-
+	const view = getComponentByViewState(viewState)
 	return (
 		<>
-			<Box display="flex" justifyContent="space-between" width="100%">
-				<Text color="green">
-					Moin,{authData?.user?.replace("@","[at]") || ""} ({data?.length || "0"})
-				</Text>
-				{
-					loading ?
-						<Text>
-							<Text color="green">
-								<Spinner type="dots"/>
-							</Text>
-							{' Loading'}
-						</Text> : ""
-				}
-
-			</Box>
-
-			<Box display="flex" height="100%" borderColor="blue" borderStyle="single" padding={0} gap={0}>
-				<Box display="flex" flexDirection="column" overflowY="hidden" height={24} width="25%">
-					<SelectInput limit={10} items={data.map(message => {
-						return {value: message.uid, label: createLabel(message.subject as string, message.date)}
-					})} onSelect={handleSelect}/>
-				</Box>
-				<Box width="75%" height="100%" marginLeft={2}>
-					<Box display="flex" flexDirection="column" height="100%" width="98%" padding={1}>
-						<Box width="100%" display="flex" justifyContent="space-between">
-							<Text underline bold>{message.subject}</Text>
-							<Text>{message?.date?.toDateString() || ""}</Text>
-						</Box>
-
-						<Newline/>
-						<Box height={16} overflowY="hidden">
-							<Text>{message.text}</Text>
-						</Box>
-						<Spacer/>
-						<Text>{(message?.flags && message?.flags?.length > 0) ? "flags: " : ""}{message?.flags?.join(" | ") || ""} </Text>
-					</Box>
-				</Box>
-			</Box>
-			<Box width="100%" borderColor="blue" borderStyle="single" display="flex" height={3} gap={2}>
-				<Newline/>
-				<Text>q: quit</Text>
-				<Text>s: flag as seen</Text>
-				<Text>del: flag as deleted</Text>
-				<Text>esc: close message</Text>
-				<Newline/>
-			</Box>
+			<Header/>
+			<Main>
+				{view}
+				<Spacer/>
+			</Main>
+			<Footer/>
 		</>
 	);
 }
