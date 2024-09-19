@@ -1,6 +1,6 @@
 import React, {Dispatch, useContext, createContext, useReducer} from 'react';
 import {auth, Auth} from "../../services/config/index.js";
-import {FetchMessageObject, ListResponse} from "../../services/imap/index.js";
+import {FetchMessageObject, ListResponse, MailboxObject} from "../../services/imap/index.js";
 
 export type MailState = {
 	authData: Auth,
@@ -8,7 +8,8 @@ export type MailState = {
 	message: FetchMessageObject | undefined,
 	loading: boolean,
 	boxList: ListResponse[],
-	selectedBox: string
+	selectedBox: string,
+	currentMailBox: MailboxObject | undefined,
 }
 export const initialMailState = {
 	authData: auth,
@@ -16,7 +17,8 @@ export const initialMailState = {
 	message: undefined,
 	loading: true,
 	boxList: [] as ListResponse[],
-	selectedBox: ''
+	selectedBox: '',
+	currentMailBox: undefined,
 }
 
 export type MailDispatchProps = {
@@ -26,7 +28,7 @@ export type MailDispatchProps = {
 	mails: FetchMessageObject[],
 } | {
 	type: "updateMessage",
-	message: FetchMessageObject
+	message: FetchMessageObject | undefined
 } | {
 	type: "openBox",
 	box: string
@@ -35,8 +37,11 @@ export type MailDispatchProps = {
 	type: "updateBoxList",
 	boxList: ListResponse[]
 } | {
-	type: "setBox",
+	type: "setSelectedBox",
 	selectedBox: string,
+}| {
+	type: "setMailBox",
+	mailBox: MailboxObject | undefined,
 }
 
 export const MailContext = createContext<MailState>(initialMailState);
@@ -88,8 +93,11 @@ export function viewReducer(state: MailState, action: MailDispatchProps): MailSt
 		case "updateBoxList": {
 			return {...state, boxList: action['boxList']};
 		}
-		case "setBox": {
+		case "setSelectedBox": {
 			return {...state, selectedBox: action['selectedBox']};
+		}
+		case "setMailBox": {
+			return {...state, currentMailBox: action['mailBox']};
 		}
 		default: {
 			throw new Error(`unknown action: ${action.type}`)

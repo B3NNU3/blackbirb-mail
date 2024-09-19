@@ -13,14 +13,15 @@ export function FoldersSelect() {
 	const state = useMailContext();
 
 	const onSelect = (item: { value: string, label: string }) => {
-		dispatch({type: "setBox", selectedBox: item.value});
+		dispatch({type: "setSelectedBox", selectedBox: item.value});
 		viewDispatch({type: "detail"});
 	}
 
 		const createElement = (box: ListResponse): ReactNode => {
 			return (
 				<Box width="100%" overflowX="hidden" marginLeft={box.parent.length}>
-					<Text bold={true}>{box.name}</Text>
+					<Text bold={(box.status?.recent || 0) > 0}>{box.name}</Text>
+					<Text> ({box.status?.messages})</Text>
 				</Box>
 			);
 		}

@@ -8,18 +8,29 @@ import {useTTYSize} from "../../../utils/use-tty-size.js";
 export function Header() {
 	const ttySize = useTTYSize()
 	const state = useMailContext()
-	const {selectedBox} = state;
+	const {selectedBox, message} = state;
 
 	return (
-		<Box display="flex" justifyContent="space-between" flexDirection="row" width={ttySize.columns} height={1}>
+		<Box display="flex" justifyContent="space-between" flexDirection="row" width={ttySize.columns} height={3}
+			 borderStyle="round" borderColor="blue">
 			<Box display="flex" flexDirection="row" justifyContent="flex-start">
-				<Text color="cyan">
-					Moin,{state.authData?.user?.replace("@", "[at]") || ""}
+				<Text backgroundColor="cyan">
+					Moin, {state.authData?.user || ""}
 				</Text>
-				<Text color="cyan"> {">"} </Text>
-				<Text>{selectedBox}</Text>
-				<Text color="cyan"> {">"} </Text>
-				<Text> count: {state.mails?.length || "0"} </Text>
+				{selectedBox.length > 0 ? (
+					<>
+						<Text color="cyan"> {">"} </Text>
+						<Text backgroundColor="blue">{selectedBox}</Text>
+						<Text backgroundColor="cyanBright">({state.mails?.length || "0"})</Text>
+					</>
+				) : (<></>)}
+				{message ? (
+					<>
+						<Text color="cyan"> {">"} </Text>
+						<Text backgroundColor="green">uid: {message.uid}</Text>
+					</>
+				) : (<></>)}
+
 			</Box>
 			{
 				state.loading ?

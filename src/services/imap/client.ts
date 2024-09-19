@@ -3,6 +3,7 @@ import {ImapFlow} from "imapflow"
 import {ClientConfig, Authentication} from "../config/index.js";
 import {FetchMessageObject, ListResponse, MailboxLockObject, MailboxObject, MessageStructureObject} from "./model.js";
 import {streamToString} from "./util/stream-to-string.js";
+import {safe} from "../../utils/safe.js";
 
 const imapFlowClient = new ImapFlow({
 	...new Authentication(),
@@ -25,7 +26,16 @@ class ImapClient {
 	}
 
 	async getMailBoxes(): Promise<ListResponse[]> {
-		return await this.client.list();
+		return await this.client.list({
+			statusQuery: {
+				messages: true,
+				recent: true,
+				uidNext: true,
+				uidValidity: true,
+				unseen: true,
+				highestModseq: true,
+			}
+		});
 	}
 
 	async openMailBox(boxName: string) {
@@ -37,7 +47,8 @@ class ImapClient {
 	}
 
 	async fetchMessages(): Promise<FetchMessageObject[]> {
-		return (await this.client.fetchAll(`1:*`, {
+
+		const messageListResult = await safe<FetchMessageObject[]>(this.client.fetchAll(`1:*`, {
 			envelope: true,
 			bodyStructure: true,
 			bodyParts: true,
@@ -45,7 +56,11 @@ class ImapClient {
 			flags: true,
 			headers: true,
 			internalDate: true,
-		})).reverse();
+		}));
+		if (messageListResult.success) {
+			return messageListResult.data.reverse();
+		}
+		return [] as FetchMessageObject[];
 	}
 
 	getMailBox(): MailboxObject | undefined {
@@ -59,6 +74,10 @@ class ImapClient {
 	}
 
 	private selectPartToDownload(structure: MessageStructureObject): string {
+		if (!structure.childNodes || structure.childNodes.length < 1) {
+			return "TEXT";
+		}
+
 		const partsMap: { [key: string]: string } = {}
 		for (const child of structure.childNodes) {
 			partsMap[child.type] = child.part

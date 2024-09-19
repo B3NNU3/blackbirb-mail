@@ -11,9 +11,9 @@ import {imapClient} from "../services/imap/index.js";
 
 export default function App() {
 	const state = useMailContext();
-	const dispatch = useMailDispatch()
+	const dispatch = useMailDispatch();
+	const viewState = useViewContext();
 	const viewDispatch = useViewDispatch();
-	const viewState = useViewContext()
 
 	useEffect(() => {
 		(async () => {
@@ -26,40 +26,22 @@ export default function App() {
 	}, []);
 
 	useInput((input, key) => {
-		if (input === 'd') {
+		if (key['ctrl'] === true && input === 'd') {
 			console.log("messages:", state?.mails?.length || "noMessages loaded")
 			console.log("message:", state?.message?.envelope?.subject || "noMessage Set")
 			console.log("loading:", state?.loading ? "true" : "false")
 		}
-		if (input === 'q') {
-			imapClient.disconnect();
-			return process.exit(0)
-		}
-		if (input === 's') {
-			if (state.message && state.message.uid) {
-				console.log("flag as seen")
-				// dispatch({type: "loading"})
-				// imapClient.flag(state.message.uid, "\\SEEN").then(() => {
-				// 	dispatch({type: "clearMessage"})
-				// });
-				// reloadMessageList();
-			}
-			return;
-		}
-		if (key['delete'] === true) {
-			if (state.message && state.message.uid) {
-				console.log("delete")
-				// dispatch({type: "loading"})
-				// imapClient.flag(state.message.uid, "\\DELETED").then(() => {
-				// 	imapClient.delete([state.message.uid]).then(() => {
-				// 		dispatch({type: "clearMessage"});
-				// 	})
-				// });
-				// reloadMessageList();
-			}
-			return;
+		if (key['ctrl'] === true && input === 'q' || key['ctrl'] === true && input === 'c') {
+			imapClient.disconnect()
+				.catch(() => {
+				})
+				.then(() => {
+					process.exit(0);
+				});
 		}
 		if (key['escape'] === true) {
+			dispatch({type: "updateMessage", message: undefined})
+			dispatch({type: "setSelectedBox", selectedBox: ""})
 			viewDispatch({type: "overview"})
 		}
 	});

@@ -31,8 +31,9 @@ export function MailContent() {
 					<Text underline bold>{message.envelope.subject}</Text>
 					<Text>{message?.internalDate?.toDateString() || ""} - {message?.internalDate?.toLocaleTimeString() || ""}</Text>
 				</Box>
-				<Box width="100%" display="flex" justifyContent="flex-start">
-					<Text italic>{message.envelope.from?.[0]?.address || ""}</Text>
+				<Box width="100%" display="flex" flexDirection="column" height={3}>
+					<Text italic>from: {message.envelope.from?.map(from=>from.address).join(" | ") || ""}</Text>
+					<Text italic>to:   {message.envelope.to?.map(to=>to.address).join(" | ") || ""}</Text>
 				</Box>
 
 				<Newline/>

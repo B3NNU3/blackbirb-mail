@@ -1,5 +1,5 @@
 import React, {ReactNode, useEffect} from 'react';
-import {Box, Text} from 'ink';
+import {Box, Text,Newline} from 'ink';
 import {useTTYSize} from "../../../utils/use-tty-size.js";
 import {SelectList} from "../select-list/index.js";
 import {useMailContext, useMailDispatch} from "../../context/mail-context.js";
@@ -18,6 +18,7 @@ export function MailList() {
 		(async () => {
 			dispatch({type: "loading"})
 			await imapClient.openMailBox(selectedBox)
+			dispatch({type: "setMailBox", mailBox: imapClient.getMailBox()})
 			const messages = await imapClient.fetchMessages()
 			dispatch({type: "updateMails", mails: messages});
 		})().catch(error => {
@@ -57,13 +58,22 @@ export function MailList() {
 
 	return (
 		<Box display="flex" flexDirection="column" height="100%" width="100%">
-			<SelectList limit={(ttySize.rows / 2) - 5} items={state.mails.map(message => {
-				return {
-					value: message.uid,
-					label: createLabel(message.envelope?.subject as string, message?.internalDate as Date),
-					element: createElement(message)
-				}
-			})} onSelect={handleSelect}/>
+			{(state.mails.length > 0) ? (
+				<SelectList limit={(ttySize.rows / 2) - 5} items={state.mails.map(message => {
+					return {
+						value: message.uid,
+						label: createLabel(message.envelope?.subject as string, message?.internalDate as Date),
+						element: createElement(message)
+					}
+				})} onSelect={handleSelect}/>
+
+			) : (
+				<>
+				<Text bold>No messages found.</Text>
+					<Newline/>
+				<Text>Press 'esc' to return.</Text>
+				</>
+			)}
 		</Box>
 	)
 }
